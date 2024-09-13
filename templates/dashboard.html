@@ -1,0 +1,203 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		document.querySelectorAll('.created-date').forEach(element => {
+			const dateStr = element.dataset.date;
+			
+			if (dateStr === 'null') {
+				element.textContent = 'Created: N/A';
+				return;
+			}
+			
+			const utcDate = new Date(dateStr);
+			const egyptOffset = 3 * 60 * 60 * 1000; 
+			const egyptDate = new Date(utcDate.getTime() + egyptOffset);
+			
+			element.textContent = 'Created: ' + timeAgo(egyptDate);
+		});
+	});
+
+	function timeAgo(date) {
+		const now = new Date();
+		const seconds = Math.floor((now - date) / 1000);
+		const days = Math.floor(seconds / 86400);
+		const hours = Math.floor((seconds % 86400) / 3600);
+		const minutes = Math.floor((seconds % 3600) / 60);
+
+		if (days > 1) return days + ' days ago';
+		if (days === 1) return 'yesterday';
+		if (hours > 1) return hours + ' hours ago';
+		if (hours === 1) return 'an hour ago';
+		if (minutes > 1) return minutes + ' minutes ago';
+		if (minutes === 1) return 'a minute ago';
+		return 'Just now';
+	}
+</script>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+		<div class="d-flex align-items-center gap-3">
+			<h2 class="mb-0 text-secondary">Sort Tasks By</h2>
+			<form action="/sort" method="get" class="d-flex align-items-center">
+				<select name="criteria" class="form-select form-select-sm" onchange="this.form.submit()">
+					<option value="" disabled selected>Sort By</option>
+					<option value="date" {% if request.args.get('criteria') == 'date' %} selected {% endif %}>Date</option>
+					<option value="priority" {% if request.args.get('criteria') == 'priority' %} selected {% endif %}>Priority</option>
+					<option value="title" {% if request.args.get('criteria') == 'title' %} selected {% endif %}>Title</option>
+				</select>
+			</form>
+		</div>
+
+		<a href="/add" class="btn btn-primary btn-sm">Add New Task</a>
+	</div>
+
+
+		<section id="tasks" class="mb-5">
+			<h2 class="mb-2">Tasks</h2>
+			<div class="row">
+				{% for todo in todos %}
+            	<div class="col-md-4 mb-4">
+					<div class="card">
+						<div class="card-body">
+							<h5 class="card-title">
+								{{ todo.title }}
+								<h6>
+									{% if todo.priority %}
+                        			| Priority:
+									<span class="badge 
+									{% if todo.priority == 'High' %} 
+										bg-danger 
+									{% elif todo.priority == 'Medium' %} 
+										bg-warning 
+									{% elif todo.priority == 'Low' %} 
+										bg-success 
+									{% endif %}">
+										{{ todo.priority }}
+									</span>
+								{% endif %}
+								</h6>
+							</h5>
+							<h6 class="card-subtitle mb-2 text-muted">
+								{% if todo.date %}
+									| Due: {{ todo.date.strftime('%Y-%m-%d') }}
+								{% endif %}								
+							</h6>
+							<p class="card-text">
+								<p class="created-date" data-date="{{ todo.created_at_display.isoformat() if todo.created_at_display else 'null' }}">
+									{% if todo.created_at %}
+										Created: {{ todo.created_at.strftime('%d/%m/%Y %H:%M') }}
+									{% else %}
+										Created: N/A
+									{% endif %}
+								</p>
+
+								<p class="card-text">
+									{% if todo.description %}
+										<strong>Description:</strong>
+										<p class="description">{{ todo.description }}</p>
+									{% endif %}
+								</p>
+								
+							</p>
+							<p class="card-text">
+								{% if todo.complete == False %}
+									<span class="badge bg-warning text-dark">Not Completed</span>
+								{% else %}
+									<span class="badge bg-success">Completed</span>
+								{% endif %}
+							</p>
+							<div class="mt-auto">
+								<a class="btn btn-sm btn-outline-secondary" href="/update/{{ todo.id }}">Update</a>
+								<a class="btn btn-sm btn-outline-secondary" href="/delete/{{ todo.id }}">Delete</a>
+								<a class="btn btn-sm btn-outline-secondary" href="/edit/{{ todo.id }}">Edit</a>
+							</div>	
+						</div>
+					</div>
+					
+				</div>
+			{% endfor %}	
+		</div>
+	</section>
+
+	
+		
+
+	<section id="statistics" class="mt-5">
+		
+
+		{% if request.path not in ['/status/completed', '/status/not_completed'] %}
+			<div class="row mb-4">
+				<div class="col-md-4">
+					<div class="card text-white bg-primary mb-3">
+						<div class="card-body">
+							<h5 class="card-title">Total Tasks</h5>
+							<p class="card-text">{{ total }}</p>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="card text-white bg-success mb-3">
+						<div class="card-body">
+							<h5 class="card-title">Completed Tasks</h5>
+							<p class="card-text">{{ completed_tasks }}</p>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="card text-white bg-warning mb-3">
+						<div class="card-body">
+							<h5 class="card-title">Pending Tasks</h5>
+							<p class="card-text">{{ pending_tasks }}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="mb-4">
+				<h5 class="mb-3">Task Progress Bar</h5>
+				<div class="progress" style="height: 25px; background-color: #e9ecef">
+					<div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+					role="progressbar"
+					style="width: {{ ((completed_tasks / total) * 100) | round(0) if total else 0 }}%;"
+					aria-valuenow="{{ completed_tasks }}"
+					aria-valuemin="0"
+					aria-valuemax="{{ total }}"
+					>
+						<span class="fw-bold">
+							{{ ((completed_tasks / total) * 100) | round(0) if total else 0 }} %
+						</span>
+					</div>
+				</div>
+			</div>
+		{% endif %}
+	</section>
+	
+<!--
+	<h2 class="mb-3 text-secondary">Sort Tasks By</h2>
+	<form action="/sort" method="get">
+		<select name="criteria" onchange="this.form.submit()">
+			<option value="">Sort By</option>
+			<option value="date" {% if request.args.get('criteria') == 'date' %} selected {% endif %}>Date</option>
+			<option value="priority" {% if request.args.get('criteria') == 'priority' %} selected {% endif %}>Priority</option>
+			<option value="title" {% if request.args.get('criteria') == 'title' %} selected {% endif %}>Title</option>
+		</select>
+	</form>
+
+
+	<div>	
+		<h2>Filter by Status</h2>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('filter', status="completed") }}">Completed</a>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('filter', status="not_completed") }}">Not Completed</a>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('dashboard') }}">All</a>
+	</div>
+	<br>
+-->	
+	<div class=" mb-3 d-flex align-items-center gap-3">	
+		<h2 class="mb-0 text-secondary">Filter by Status</h2>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('filter', status="completed") }}">Completed</a>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('filter', status="not_completed") }}">Not Completed</a>
+		<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('dashboard') }}">All</a>
+	</div>
+</div>
+{% endblock %}
