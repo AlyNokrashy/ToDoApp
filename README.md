@@ -54,9 +54,6 @@ This folder contains all HTML templates used in the project. The templates use J
 ### 3. `requirements.txt`
 Lists all the dependencies required to run the app, including Flask, Flask-Login, Flask-WTF, Flask-Bcrypt, SQLAlchemy, and others.
 
-### 4. `migrations/`
-Contains database migration scripts managed by Flask-Migrate.
-
 ## Design Choices
 
 1. **Flask for Simplicity and Flexibility**: Flask was chosen as the web framework due to its lightweight nature, allowing for more control over routing, session management, and database interaction.
